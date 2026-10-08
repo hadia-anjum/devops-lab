@@ -1,0 +1,35 @@
+SRC_DIR := src
+OUT_DIR := out
+SOURCES := $(wildcard $(SRC_DIR)/*.txt)
+OUTPUTS := $(patsubst $(SRC_DIR)/%.txt, $(OUT_DIR)/%.txt, $(SOURCES))
+
+.PHONY: all check build test clean ci
+
+all: test
+
+$(OUT_DIR):
+	mkdir -p $(OUT_DIR)
+
+$(OUT_DIR)/%.txt: $(SRC_DIR)/%.txt | $(OUT_DIR)
+	@echo "BUILD $< -> $@"
+	@tr '[:lower:]' '[:upper:]' < $< > $@
+
+check:
+	@if [ ! -d "$(SRC_DIR)" ] || [ -z "$(wildcard $(SRC_DIR)/*.txt)" ]; then \
+		echo "ERROR: no .txt files found in $(SRC_DIR)" >&2; \
+		exit 1; \
+	fi
+	@echo "found $(words $(SOURCES)) source files"
+
+build: $(OUTPUTS)
+
+test: build
+	@if grep -q '[a-z]' $(OUTPUTS) >/dev/null 2>&1; then \
+		echo "TEST FAILED: lowercase characters remain"; exit 1; \
+	fi
+	@echo "TEST PASSED"
+
+clean:
+	rm -rf $(OUT_DIR)
+
+ci: clean check test
